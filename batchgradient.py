@@ -10,16 +10,19 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 df = pd.read_csv('F:\\Рабочий стол\\All\\4 семестр\\neuro-deep\\data.csv')
+df = df.iloc[np.random.permutation(len(df))]
 # возьмем перые 100 строк, 4-й столбец 
-y = df.iloc[0:100, 4].values
+y = df.iloc[:, 4]
 # так как ответы у нас строки - нужно перейти к численным значениям
-y = np.where(y == "Iris-setosa", 1, 0).reshape(-1,1) # reshape нужен для матричных операций
-
+y = y.map({'Iris-setosa' : 1, 'Iris-virginica' : 2, 'Iris-versicolor': 3}).values# reshape нужен для матричных операций
+Y = pd.get_dummies(y).to_numpy()
 # возьмем два признака, чтобы было удобне визуализировать задачу
-X = df.iloc[0:100, [0, 2]].values
+X = df.iloc[:, :4].values
 # добавим фиктивный признак для удобства матричных вычслений
 X = np.concatenate([np.ones((len(X),1)), X], axis = 1)
 # зададим функцию активации - сигмоида
+
+
 def sigmoid(y):
     return 1 / (1 + np.exp(-y))
 
@@ -29,8 +32,8 @@ def derivative_sigmoid(y):
 
 # инициализируем нейронную сеть 
 inputSize = X.shape[1] # количество входных сигналов равно количеству признаков задачи 
-hiddenSizes = 5 # задаем число нейронов скрытого слоя 
-outputSize = 1 if len(y.shape) else y.shape[1] # количество выходных сигналов равно количеству классов задачи
+hiddenSizes = 20 # задаем число нейронов скрытого слоя 
+outputSize = Y.shape[1] if len(Y.shape) else 1 # количество выходных сигналов равно количеству классов задачи
 
 # веса инициализируем случайными числами, но теперь будем хранить их списком
 weights = [
@@ -100,7 +103,8 @@ def train_stochastic(x_values, target, learning_rate, shuffle = False):
 
 # функция предсказания возвращает только выход последнего слоя
 def predict(x_values):
-    return feed_forward(x_values)[-1]
+    pred = feed_forward(x_values)[-1]
+    return pred
 
 
 # задаем параметры обучения
@@ -109,21 +113,14 @@ learning_rate = 0.01
 
 # обучаем сеть (фактически сеть это вектор весов weights)
 for i in range(iterations):
-    train_stochastic(X, y, learning_rate, shuffle = True)
+    train_stochastic(X, Y, learning_rate, shuffle = True)
 
     if i % 50 == 0:
-        print("На итерации: " + str(i) + ' || ' + "Средняя ошибка: " + str(np.mean(np.square(y - predict(X)))))
+        print("На итерации: " + str(i) + ' || ' + "Средняя ошибка: " + str(np.mean(np.square(Y - predict(X)))))
 
 # считаем ошибку на обучающей выборке
 pr = predict(X)
-print(sum(abs(y-(pr>0.5))))
+pr = np.where(pr > 0.5, 1, 0)
+print(sum(abs(pr-Y)))
 
-
-# считаем ошибку на всей выборке
-y = df.iloc[:, 4].values
-y = np.where(y == "Iris-setosa", 1, 0).reshape(-1,1) 
-X = df.iloc[:, [0, 2]].values
-X = np.concatenate([np.ones((len(X),1)), X], axis = 1)
-
-pr = predict(X)
-print(sum(abs(y-(pr>0.5))))
+pr>0.5-Y
